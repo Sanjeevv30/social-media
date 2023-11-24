@@ -1,4 +1,4 @@
-body {
+ body {
     font-family: Arial, sans-serif;
     text-align: center;
     background-color: #f0f0f0;
@@ -58,14 +58,15 @@ h1 {
     color: #333;
 }
 
-.book-list ul {
+.book-list span {
     list-style-type: none;
     padding: 0;
 }
 
-.book-list li {
+.book-list span {
+   display:inline-block;
     font-size: 18px;
-    margin-bottom: 10px;
+    margin: 10px;
 }
 
-/* Add more styles as needed */
+

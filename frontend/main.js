@@ -1,34 +1,150 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const bookForm = document.getElementById('bookForm');
-    const bookList = document.getElementById('bookList');
+const bookForm = document.getElementById("bookForm");
+const bookList = document.getElementById("bookList");
+const bookReturnedList = document.getElementById("bookReturnList");
+const books = [];
 
-    bookForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const bookName = document.getElementById('bookName').value;
+async function onSubmit(bookId) {
+  try {
+    if (typeof bookId !== "undefined") {
+      const id = bookId;
+      const fines = await axios.get(`http://localhost:8000/get-fine/${id}`);
+      console.log(fines.data);
+      console.log(
+        `Book Name : ${fines.data.bookName} , Fine :${
+          document.getElementById(bookId).childNodes[0].value
+        }, Returned On :${new Date().toLocaleString()}`
+      );
+      const fine = document.getElementById(bookId).childNodes[0].value;
+      console.log(document.getElementById(bookId));
+      await axios.delete(`http://localhost:8000/delete/${id}`);
+      document.getElementById(bookId).remove();
+      const Name = fines.data.bookName;
+      
+      const Returned = new Date().toLocaleString();
+      
+      const response = await axios.post(`http://localhost:8000/add-fine`, {
+        Name,
+        fine,
+        Returned,
+      });
 
-        try {
-            const response = await axios.post('/add-book', { bookName });
-            console.log(response.data);
-            displayBooks();
-        } catch (error) {
-            console.error(error);
-        }
-    });
-
-    async function displayBooks() {
-        try {
-            const response = await axios.get('/books');
-            const books = response.data;
-            bookList.innerHTML = '';
-            books.forEach((book) => {
-                const li = document.createElement('li');
-                li.textContent = `${book.name} - Due: ${book.dueDate}`;
-                bookList.appendChild(li);
-            });
-        } catch (error) {
-            console.error(error);
-        }
+      bookReturnedList.innerHTML +=   `Book Name : ${response.data.Name} Fine : ${response.data.fine} Returned On :${response.data.Returned}`;
+      console.log(response.data);
+    } else {
+      console.error("bookId is undefined");
     }
+  } catch (error) {
+    console.error("Error deleting book:", error);
+  }
+}
+bookForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const bookNameInput = document.getElementById("bookName");
+  const bookName = bookNameInput.value.trim();
 
-    displayBooks();
+  if (bookName) {
+    try {
+      const response = await axios.post("http://localhost:8000/add-book", {
+        bookName,
+      });
+      console.log(
+        `Book added: ${response.data.bookName}, Created at: ${response.data.createdAt}`
+      );
+      displayBooks(response.data);
+    } catch (error) {
+      console.error(error);
+    }
+  }
 });
+
+document.addEventListener("DOMContentLoaded", async () => {
+  const response = await axios.get("http://localhost:8000/get-book");
+  const books = response.data;
+  const fineResponse = await axios.get("http://localhost:8000/get-fine");
+  console.log(fineResponse);
+
+  console.log(response.data);
+  //bookReturnedList.innerHTML = "";
+  const newResponse = fineResponse.data;
+  newResponse.forEach((bookResponse) => {
+    //displayBooks(bookResponse)
+    bookReturnedList.innerHTML += `Book Name : ${bookResponse.Name} Fine : ${bookResponse.fine} Returned On :${bookResponse.Returned}`;
+  });
+  console.log(books);
+  books.forEach((book) => {
+    displayBooks(book);
+  });
+});
+
+async function displayBooks(book) {
+  try {
+    const span = document.createElement("span");
+    span.id = book.id;
+    const createdAtTimestamp = new Date(book.createdAt);
+    const updatedAtdueDate = new Date(book.updatedAt);
+    const dueDate = createdAtTimestamp;
+    dueDate.setDate(dueDate.getDate());
+    dueDate.setMinutes(createdAtTimestamp.getMinutes()+60);
+    console.log(new Date().getHours());
+    console.log(updatedAtdueDate.getHours());
+    span.innerHTML = `<p> <h2> Book Title :</h2>  ${
+      book.bookName
+    }</p><p>  BookTaken: ${updatedAtdueDate.toLocaleString()} </p> <p> Due: ${createdAtTimestamp.toLocaleString()} </p>
+        <p> Fine:$ ${
+          (new Date().getHours() - updatedAtdueDate.getHours()) * 10
+        }</p>
+        <button onclick="onReturn(${book.id})">Return Book</button>`;
+
+    bookList.appendChild(span);
+  } catch (error) {
+    console.error(error);
+  }
+}
+async function onReturn(bookId) {
+  const span = document.getElementById(bookId);
+  const fine = span.childNodes[8].textContent.slice(7);
+  console.log(fine);
+  if (fine > 0) {
+    span.innerHTML = `<input id="id" name="name" value="${fine}" disabled></input></br> <button type="submit" id="id" onclick="onSubmit(${bookId})">SEND</button>`;
+
+    const bookIndex = books.findIndex((book) => book.id === bookId);
+    if (bookIndex !== -1) {
+      books.splice(bookIndex, 1);
+      bookReturnedList.appendChild(span);
+    }
+  } else {
+    onSubmits(bookId);
+    async function onSubmits(bookId) {
+      try {
+        if (typeof bookId !== "undefined") {
+          const id = bookId;
+          const fines = await axios.get(`http://localhost:8000/get-fine/${id}`);
+          console.log(fines.data);
+          console.log(
+            `Book Name : ${fines.data.bookName} , Fine :${
+              document.getElementById(bookId).childNodes[0].value
+            }, Returned On :${new Date().toLocaleString()}`
+          );
+          await axios.delete(`http://localhost:8000/delete/${id}`);
+          document.getElementById(bookId).remove();
+          const Name = fines.data.bookName;
+          const fine = 0;
+          const Returned = new Date().toLocaleString();
+          const response = await axios.post(`http://localhost:8000/add-fine`, {
+            Name,
+            fine,
+            Returned,
+          });
+          //  const bookReturn =  document.getElementById("bookReturnList");
+
+          bookReturnedList.innerHTML += `Book Name : ${response.data.Name} Fine : ${response.data.fine} Returned On :${response.data.Returned}`;
+          console.log(response.data);
+        } else {
+          console.error("bookId is undefined");
+        }
+      } catch (error) {
+        console.error("Error deleting book:", error);
+      }
+    }
+  }
+}
